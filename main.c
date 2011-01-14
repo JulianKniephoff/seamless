@@ -8,7 +8,6 @@
 #include "pixel_access.h"
 
 extern Uint8 gradient_magnitude (SDL_Surface * image, int x, int y);
-
 extern Uint8 steepest_neighbor (SDL_Surface * image, int x, int y);
 
 void
@@ -19,7 +18,7 @@ quit (void)
 }
 
 void
-energize (SDL_Surface * image, SDL_Surface *energy,
+energize (SDL_Surface * image, SDL_Surface * energy,
 	  Uint8 (*energy_function) (SDL_Surface *, int, int))
 {
   /* Process image */
@@ -65,8 +64,7 @@ main (int argc, char *argv[])
   atexit (quit);
   if (SDL_Init (SDL_INIT_VIDEO))
     {
-      fprintf (stderr, "Could not initialize SDL: %s\n",
-	       SDL_GetError ());
+      fprintf (stderr, "Could not initialize SDL: %s\n", SDL_GetError ());
       return (EXIT_FAILURE);
     }
   if (IMG_Init (0))
@@ -89,8 +87,7 @@ main (int argc, char *argv[])
 		      SDL_SWSURFACE);
   if (!screen)
     {
-      fprintf (stderr, "Could not set video mode: %s\n",
-	       SDL_GetError ());
+      fprintf (stderr, "Could not set video mode: %s\n", SDL_GetError ());
       return (EXIT_FAILURE);
     }
   SDL_Surface *energy =
@@ -121,25 +118,25 @@ main (int argc, char *argv[])
 	    case SDL_QUIT:
 	      running = 0;
 	      break;
-            case SDL_KEYDOWN:
-              switch (event.key.keysym.sym)
-                {
-                  case SDLK_RETURN:
-                    if (energy_function == steepest_neighbor)
-                      {
-                        energy_function = gradient_magnitude;
-                      }
-                    else
-                      {
-                        energy_function = steepest_neighbor;
-                      }
+	    case SDL_KEYDOWN:
+	      switch (event.key.keysym.sym)
+		{
+		case SDLK_RETURN:
+		  if (energy_function == steepest_neighbor)
+		    {
+		      energy_function = gradient_magnitude;
+		    }
+		  else
+		    {
+		      energy_function = steepest_neighbor;
+		    }
 
-                    energize (image, energy, energy_function);
-                    break;
-                  default:
-                    break;
-                }
-              break;
+		  energize (image, energy, energy_function);
+		  break;
+		default:
+		  break;
+		}
+	      break;
 	    }
 	}
 
