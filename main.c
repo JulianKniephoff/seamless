@@ -56,7 +56,7 @@ main (int argc, char *argv[])
   /* Process command line arguments */
   if (argc != 2)
     {
-      fprintf (stderr, "Benutzung: %s <Bildpfad>\n", argv[0]);
+      fprintf (stderr, "Usage: %s <image path>\n", argv[0]);
       return (EXIT_FAILURE);
     }
   char *image_path = argv[1];
@@ -65,13 +65,13 @@ main (int argc, char *argv[])
   atexit (quit);
   if (SDL_Init (SDL_INIT_VIDEO))
     {
-      fprintf (stderr, "Konnte SDL nicht initialisieren: %s\n",
+      fprintf (stderr, "Could not initialize SDL: %s\n",
 	       SDL_GetError ());
       return (EXIT_FAILURE);
     }
   if (IMG_Init (0))
     {
-      fprintf (stderr, "Konnte SDL_image nicht initialisieren: %s\n",
+      fprintf (stderr, "Could not initialize SDL_image: %s\n",
 	       IMG_GetError ());
       return (EXIT_FAILURE);
     }
@@ -80,7 +80,7 @@ main (int argc, char *argv[])
   SDL_Surface *image = IMG_Load (image_path);
   if (!image)
     {
-      fprintf (stderr, "Konnte Bild %s nicht laden: %s\n", image_path,
+      fprintf (stderr, "Could not load image %s: %s\n", image_path,
 	       IMG_GetError ());
       return (EXIT_FAILURE);
     }
@@ -89,7 +89,7 @@ main (int argc, char *argv[])
 		      SDL_SWSURFACE);
   if (!screen)
     {
-      fprintf (stderr, "Konnte Darstellungsmodus nicht setzen: %s\n",
+      fprintf (stderr, "Could not set video mode: %s\n",
 	       SDL_GetError ());
       return (EXIT_FAILURE);
     }
@@ -100,7 +100,7 @@ main (int argc, char *argv[])
 			  image->format->Amask);
   if (!energy)
     {
-      fprintf (stderr, "Konnte keinen Energiepuffer erstellen: %s\n",
+      fprintf (stderr, "Could not create an energy buffer: %s\n",
 	       SDL_GetError ());
       return (EXIT_FAILURE);
     }
