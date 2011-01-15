@@ -6,10 +6,12 @@
 
 #include "util.h"
 #include "pixel_access.h"
+#include "array_image.h"
 
 extern Uint8 gradient_magnitude (SDL_Surface * image, int x, int y);
 extern Uint8 steepest_neighbor (SDL_Surface * image, int x, int y);
 
+/* TODO There should be more cleanup here... */
 void
 quit (void)
 {
