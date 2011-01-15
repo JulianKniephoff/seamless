@@ -64,7 +64,7 @@ gradient_magnitude (Uint8 * image, int w, int h, int x, int y)
   return sqrt (ddx * ddx + ddy * ddy);
 }
 
-Uint8
+float
 steepest_neighbor (Uint8 * image, int w, int h, int x, int y)
 {
   Uint8 l, l1, l2, l3, l4, l5, l6, l7, l8;
@@ -92,14 +92,12 @@ steepest_neighbor (Uint8 * image, int w, int h, int x, int y)
   if (y > 0)
     {
       pixel = array_p (image, w, x, y - 1);
-      l1 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
+      l4 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
     }
-  pixel = array_p (image, w, x, y);
-  l2 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
   if (y < h - 1)
     {
       pixel = array_p (image, w, x, y + 1);
-      l3 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
+      l5 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
     }
 
   if (x < w - 1)
@@ -107,14 +105,14 @@ steepest_neighbor (Uint8 * image, int w, int h, int x, int y)
       if (y > 0)
         {
           pixel = array_p (image, w, x + 1, y - 1);
-          l1 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
+          l6 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
         }
       pixel = array_p (image, w, x + 1, y);
-      l2 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
+      l7 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
       if (y < h - 1)
         {
           pixel = array_p (image, w, x + 1, y + 1);
-          l3 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
+          l8 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
         }
     }
 

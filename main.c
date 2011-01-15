@@ -5,7 +5,6 @@
 #include <SDL_image.h>
 
 #include "util.h"
-#include "pixel_access.h"
 #include "array_image.h"
 
 
@@ -109,7 +108,7 @@ main (int argc, char *argv[])
   int running = 1;
   Uint32 black = SDL_MapRGB (screen->format, 0, 0, 0);
   SDL_Event event;
-  energy_function f = gradient_magnitude;
+  energy_function f = steepest_neighbor;
   SDL_Surface *energy = energize (image, f);
   while (running)
     {

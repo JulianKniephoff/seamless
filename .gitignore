@@ -2,3 +2,4 @@ seamless
 image.jpg
 *~
 *.swp
+*.o
