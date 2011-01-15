@@ -1,124 +1,121 @@
 #include <math.h>
 
-#include <SDL.h>
-
 #include "util.h"
-#include "pixel_access.h"
+#include "array_image.h"
 
-Uint8
-gradient_magnitude (SDL_Surface * image, int x, int y)
+float
+gradient_magnitude (Uint8 * image, int w, int h, int x, int y)
 {
-  Uint8 r, g, b, l1, l2;
+  Uint8 *pixel;
+  Uint8 l1, l2;
   float ddx, ddy;
   /* TODO Better handling of the borders... */
   /* d/dx */
   if (x == 0)
     {
-      SDL_GetRGB (get_pixel (image, x, y), image->format, &r, &g, &b);
-      l1 = max (max (r, g), b);
-      SDL_GetRGB (get_pixel (image, x + 1, y), image->format, &r, &g, &b);
-      l2 = max (max (r, g), b);
+      pixel = array_p (image, w, x, y);
+      l1 = value_from_rgb (pixel[0], pixel[1], pixel[2]);
+      pixel += 3;
+      l2 = value_from_rgb (pixel[0], pixel[1], pixel[2]);
       ddx = l2 - l1;
     }
-  else if (x == image->w - 1)
+  else if (x == w - 1)
     {
-      SDL_GetRGB (get_pixel (image, x - 1, y), image->format, &r, &g, &b);
-      l1 = max (max (r, g), b);
-      SDL_GetRGB (get_pixel (image, x, y), image->format, &r, &g, &b);
-      l2 = max (max (r, g), b);
+      pixel = array_p (image, w, x - 1, y);
+      l1 = value_from_rgb (pixel[0], pixel[1], pixel[2]);
+      pixel += 3;
+      l2 = value_from_rgb (pixel[0], pixel[1], pixel[2]);
       ddx = l2 - l1;
     }
   else
     {
-      SDL_GetRGB (get_pixel (image, x - 1, y), image->format, &r, &g, &b);
-      l1 = max (max (r, g), b);
-      SDL_GetRGB (get_pixel (image, x + 1, y), image->format, &r, &g, &b);
-      l2 = max (max (r, g), b);
+      pixel = array_p (image, w, x - 1, y);
+      l1 = value_from_rgb (pixel[0], pixel[1], pixel[2]);
+      pixel += 6;
+      l2 = value_from_rgb (pixel[0], pixel[1], pixel[2]);
       ddx = (l2 - l1) / 2.0f;
     }
   /* d/dy */
   if (y == 0)
     {
-      SDL_GetRGB (get_pixel (image, x, y), image->format, &r, &g, &b);
-      l1 = max (max (r, g), b);
-      SDL_GetRGB (get_pixel (image, x, y + 1), image->format, &r, &g, &b);
-      l2 = max (max (r, g), b);
+      pixel = array_p (image, w, x, y);
+      l1 = value_from_rgb (pixel[0], pixel[1], pixel[2]);
+      pixel += 3 * w;
+      l2 = value_from_rgb (pixel[0], pixel[1], pixel[2]);
       ddy = l2 - l1;
     }
-  else if (y == image->h - 1)
+  else if (y == h - 1)
     {
-      SDL_GetRGB (get_pixel (image, x, y - 1), image->format, &r, &g, &b);
-      l1 = max (max (r, g), b);
-      SDL_GetRGB (get_pixel (image, x, y), image->format, &r, &g, &b);
-      l2 = max (max (r, g), b);
+      pixel = array_p (image, w, x, y - 1);
+      l1 = value_from_rgb (pixel[0], pixel[1], pixel[2]);
+      pixel += 3 * w;
+      l2 = value_from_rgb (pixel[0], pixel[1], pixel[2]);
       ddy = l2 - l1;
     }
   else
     {
-      SDL_GetRGB (get_pixel (image, x, y - 1), image->format, &r, &g, &b);
-      l1 = max (max (r, g), b);
-      SDL_GetRGB (get_pixel (image, x, y + 1), image->format, &r, &g, &b);
-      l2 = max (max (r, g), b);
+      pixel = array_p (image, w, x, y - 1);
+      l1 = value_from_rgb (pixel[0], pixel[1], pixel[2]);
+      pixel += 6 * w;
+      l2 = value_from_rgb (pixel[0], pixel[1], pixel[2]);
       ddy = (l2 - l1) / 2.0f;
     }
 
-  return sqrt (ddx * ddx + ddy * ddy) * M_SQRT2;
+  return sqrt (ddx * ddx + ddy * ddy);
 }
 
 Uint8
-steepest_neighbor (SDL_Surface * image, int x, int y)
+steepest_neighbor (Uint8 * image, int w, int h, int x, int y)
 {
-  Uint8 r, g, b, l, l1, l2, l3, l4, l5, l6, l7, l8;
+  Uint8 l, l1, l2, l3, l4, l5, l6, l7, l8;
   l1 = l2 = l3 = l4 = l5 = l6 = l7 = l8 = 0;
 
-  SDL_GetRGB (get_pixel (image, x, y), image->format, &r, &g, &b);
-  l = max (max (r, g), b);
+  Uint8 *pixel = array_p (image, w, x, y);
+  l = value_from_rgb (pixel[0], pixel[1], pixel[2]);
 
   if (x > 0)
     {
       if (y > 0)
 	{
-	  SDL_GetRGB (get_pixel (image, x - 1, y - 1), image->format, &r, &g,
-		      &b);
-	  l1 = abs (l - max (max (r, g), b));
+          pixel = array_p (image, w, x - 1, y - 1);
+	  l1 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
 	}
-      SDL_GetRGB (get_pixel (image, x - 1, y), image->format, &r, &g, &b);
-      l2 = abs (l - max (max (r, g), b));
-      if (y < image->h - 1)
+      pixel = array_p (image, w, x - 1, y);
+      l2 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
+      if (y < h - 1)
 	{
-	  SDL_GetRGB (get_pixel (image, x - 1, y + 1), image->format, &r, &g,
-		      &b);
-	  l3 = abs (l - max (max (r, g), b));
+          pixel = array_p (image, w, x - 1, y + 1);
+	  l3 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
 	}
     }
 
   if (y > 0)
     {
-      SDL_GetRGB (get_pixel (image, x, y - 1), image->format, &r, &g, &b);
-      l4 = abs (l - max (max (r, g), b));
+      pixel = array_p (image, w, x, y - 1);
+      l1 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
     }
-  if (y < image->h - 1)
+  pixel = array_p (image, w, x, y);
+  l2 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
+  if (y < h - 1)
     {
-      SDL_GetRGB (get_pixel (image, x, y + 1), image->format, &r, &g, &b);
-      l5 = abs (l - max (max (r, g), b));
+      pixel = array_p (image, w, x, y + 1);
+      l3 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
     }
 
-  if (x < image->w - 1)
+  if (x < w - 1)
     {
       if (y > 0)
-	{
-	  SDL_GetRGB (get_pixel (image, x + 1, y - 1), image->format, &r, &g,
-		      &b);
-	  l6 = abs (l - max (max (r, g), b));
-	}
-      SDL_GetRGB (get_pixel (image, x + 1, y), image->format, &r, &g, &b);
-      l7 = abs (l - max (max (r, g), b));
-      if (y < image->h - 1)
-	{
-	  SDL_GetRGB (get_pixel (image, x + 1, y + 1), image->format, &r, &g,
-		      &b);
-	  l8 = abs (l - max (max (r, g), b));
-	}
+        {
+          pixel = array_p (image, w, x + 1, y - 1);
+          l1 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
+        }
+      pixel = array_p (image, w, x + 1, y);
+      l2 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
+      if (y < h - 1)
+        {
+          pixel = array_p (image, w, x + 1, y + 1);
+          l3 = abs (l - value_from_rgb (pixel[0], pixel[1], pixel[2]));
+        }
     }
 
   return max (max (max (max (max (max (max (l1, l2), l3), l4), l5), l6), l7),

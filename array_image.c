@@ -74,7 +74,7 @@ array_to_surface (Uint8 * array, Uint32 flags, int width, int height,
 	  put_pixel (surface, x, y,
 		     SDL_MapRGB (surface->format, pixel[0], pixel[1],
 				 pixel[2]));
-	  array += 3;
+	  pixel += 3;
 	}
     }
 

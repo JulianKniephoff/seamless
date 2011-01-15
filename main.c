@@ -8,8 +8,12 @@
 #include "pixel_access.h"
 #include "array_image.h"
 
-extern Uint8 gradient_magnitude (SDL_Surface * image, int x, int y);
-extern Uint8 steepest_neighbor (SDL_Surface * image, int x, int y);
+
+typedef float (*energy_function) (Uint8 * image, int width, int height, int x, int y);
+
+extern float gradient_magnitude (Uint8 * image, int width, int height, int x, int y);
+extern float steepest_neighbor (Uint8 * image, int width, int height, int x, int y);
+
 
 /* TODO There should be more cleanup here... */
 void
@@ -19,36 +23,43 @@ quit (void)
   SDL_Quit ();
 }
 
-void
-energize (SDL_Surface * image, SDL_Surface * energy,
-	  Uint8 (*energy_function) (SDL_Surface *, int, int))
+SDL_Surface *
+energize (SDL_Surface * image, energy_function f)
 {
-  /* Process image */
-  if (SDL_MUSTLOCK (image))
+  Uint8 *array = surface_to_array (image);
+
+  if (!array)
     {
-      SDL_LockSurface (image);
+      return NULL;
     }
-  if (SDL_MUSTLOCK (energy))
+  float *result = malloc (sizeof (float) * image->w * image->h);
+  if (!result)
     {
-      SDL_LockSurface (energy);
+      free (array);
+      return NULL;
     }
-  Uint8 e;
-  for (int x = 0; x < image->w; ++x)
+  Uint8 *vis = make_array (image->w, image->h);
+
+  float *res = result;
+  Uint8 *pixel = vis;
+  for (int y = 0; y < image->h; ++y)
     {
-      for (int y = 0; y < image->h; ++y)
-	{
-	  e = energy_function (image, x, y);
-	  put_pixel (energy, x, y, SDL_MapRGB (energy->format, e, e, e));
-	}
+      for (int x = 0; x < image->w; ++x)
+        {
+          *res = f (array, image->w, image->h, x, y);
+          pixel[0] = min (max (*res, 0), 255);
+          pixel[1] = min (max (*res, 0), 255);
+          pixel[2] = min (max (*res, 0), 255);
+
+          ++res;
+          pixel += 3;
+        }
     }
-  if (SDL_MUSTLOCK (energy))
-    {
-      SDL_UnlockSurface (energy);
-    }
-  if (SDL_MUSTLOCK (image))
-    {
-      SDL_UnlockSurface (image);
-    }
+
+  return array_to_surface (vis, image->flags, image->w, image->h,
+			   image->format->BitsPerPixel, image->format->Rmask,
+			   image->format->Gmask, image->format->Bmask,
+			   image->format->Amask);
 }
 
 int
@@ -92,25 +103,14 @@ main (int argc, char *argv[])
       fprintf (stderr, "Could not set video mode: %s\n", SDL_GetError ());
       return (EXIT_FAILURE);
     }
-  SDL_Surface *energy =
-    SDL_CreateRGBSurface (image->flags | SDL_SWSURFACE, image->w, image->h,
-			  image->format->BitsPerPixel, image->format->Rmask,
-			  image->format->Gmask, image->format->Bmask,
-			  image->format->Amask);
-  if (!energy)
-    {
-      fprintf (stderr, "Could not create an energy buffer: %s\n",
-	       SDL_GetError ());
-      return (EXIT_FAILURE);
-    }
 
 
   /* Main loop */
   int running = 1;
   Uint32 black = SDL_MapRGB (screen->format, 0, 0, 0);
   SDL_Event event;
-  Uint8 (*energy_function) (SDL_Surface *, int, int);
-  energy_function = steepest_neighbor;
+  energy_function f = gradient_magnitude;
+  SDL_Surface *energy = energize (image, f);
   while (running)
     {
       while (SDL_PollEvent (&event))
@@ -124,16 +124,17 @@ main (int argc, char *argv[])
 	      switch (event.key.keysym.sym)
 		{
 		case SDLK_RETURN:
-		  if (energy_function == steepest_neighbor)
+		  if (f == steepest_neighbor)
 		    {
-		      energy_function = gradient_magnitude;
+		      f = gradient_magnitude;
 		    }
 		  else
 		    {
-		      energy_function = steepest_neighbor;
+		      f = steepest_neighbor;
 		    }
 
-		  energize (image, energy, energy_function);
+		  SDL_FreeSurface (energy);
+		  energy = energize (image, f);
 		  break;
 		default:
 		  break;

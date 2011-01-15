@@ -9,6 +9,8 @@
 #define array_g(array, w, x, y) ((array)[3 * ((w) * (y) + (x)) + 1])
 #define array_b(array, w, x, y) ((array)[3 * ((w) * (y) + (x)) + 2])
 
+#define make_array(width, height) (malloc (sizeof (Uint8 *) * 3 * width * height))
+
 Uint8 *surface_to_array (SDL_Surface * surface);
 
 SDL_Surface *array_to_surface (Uint8 * array, Uint32 flags, int width,
