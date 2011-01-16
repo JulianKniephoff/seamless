@@ -3,3 +3,6 @@ image.jpg
 *~
 *.swp
 *.o
+cmake_install.cmake
+CMakeFiles
+CMakeCache.txt
