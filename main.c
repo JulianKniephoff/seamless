@@ -79,6 +79,13 @@ main (int argc, char *argv[])
       fprintf (stderr, "Could not initialize SDL: %s\n", SDL_GetError ());
       return (EXIT_FAILURE);
     }
+  char *title;
+  asprintf (&title, "seamless - %s", image_path);
+  SDL_WM_SetCaption (title, title);
+  if (title)
+    {
+      free (title);
+    }
   if (IMG_Init (0))
     {
       fprintf (stderr, "Could not initialize SDL_image: %s\n",
@@ -108,7 +115,7 @@ main (int argc, char *argv[])
   int running = 1;
   Uint32 black = SDL_MapRGB (screen->format, 0, 0, 0);
   SDL_Event event;
-  energy_function f = steepest_neighbor;
+  energy_function f = gradient_magnitude;
   SDL_Surface *energy = energize (image, f);
   while (running)
     {
@@ -120,6 +127,7 @@ main (int argc, char *argv[])
 	      running = 0;
 	      break;
 	    case SDL_KEYDOWN:
+              /* TODO Should handle Command-Q, but only on the Mac... */
 	      switch (event.key.keysym.sym)
 		{
 		case SDLK_RETURN:
