@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -8,10 +9,13 @@
 #include "array_image.h"
 
 
-typedef float (*energy_function) (Uint8 * image, int width, int height, int x, int y);
+typedef float (*energy_function) (Uint8 * image, int width, int height, int x,
+				  int y);
 
-extern float gradient_magnitude (Uint8 * image, int width, int height, int x, int y);
-extern float steepest_neighbor (Uint8 * image, int width, int height, int x, int y);
+extern float gradient_magnitude (Uint8 * image, int width, int height, int x,
+				 int y);
+extern float steepest_neighbor (Uint8 * image, int width, int height, int x,
+				int y);
 
 
 /* TODO There should be more cleanup here... */
@@ -22,7 +26,7 @@ quit (void)
   SDL_Quit ();
 }
 
-SDL_Surface *
+float *
 energize (SDL_Surface * image, energy_function f)
 {
   Uint8 *array = surface_to_array (image);
@@ -37,28 +41,39 @@ energize (SDL_Surface * image, energy_function f)
       free (array);
       return NULL;
     }
-  Uint8 *vis = make_array (image->w, image->h);
 
   float *res = result;
-  Uint8 *pixel = vis;
   for (int y = 0; y < image->h; ++y)
     {
       for (int x = 0; x < image->w; ++x)
-        {
-          *res = f (array, image->w, image->h, x, y);
-          pixel[0] = min (max (*res, 0), 255);
-          pixel[1] = min (max (*res, 0), 255);
-          pixel[2] = min (max (*res, 0), 255);
+	{
+	  *res = f (array, image->w, image->h, x, y);
 
-          ++res;
-          pixel += 3;
-        }
+	  ++res;
+	}
     }
 
-  return array_to_surface (vis, image->flags, image->w, image->h,
-			   image->format->BitsPerPixel, image->format->Rmask,
-			   image->format->Gmask, image->format->Bmask,
-			   image->format->Amask);
+  return result;
+}
+
+SDL_Surface *
+energy_to_surface (float *array, Uint32 flags, int width,
+		   int height, int bitsPerPixel, Uint32 Rmask,
+		   Uint32 Gmask, Uint32 Bmask, Uint32 Amask)
+{
+  Uint8 *result = malloc (sizeof (Uint8) * 3 * width * height), *pixel =
+    result;
+
+  for (int i = 0; i < width * height; ++i)
+    {
+      pixel[0] = array[i] * 255;
+      pixel[1] = array[i] * 255;
+      pixel[2] = array[i] * 255;
+      pixel += 3;
+    }
+
+  return array_to_surface (result, flags, width, height, bitsPerPixel, Rmask,
+			   Gmask, Bmask, Amask);
 }
 
 int
@@ -111,8 +126,13 @@ main (int argc, char *argv[])
   int running = 1;
   Uint32 black = SDL_MapRGB (screen->format, 0, 0, 0);
   SDL_Event event;
-  energy_function f = gradient_magnitude;
-  SDL_Surface *energy = energize (image, f);
+  float *array = energize (image, steepest_neighbor);
+  SDL_Surface *vis =
+    energy_to_surface (array, image->flags, image->w, image->h,
+		       image->format->BitsPerPixel, image->format->Rmask,
+		       image->format->Gmask, image->format->Bmask,
+		       image->format->Amask);
+  int column = screen->h / 2;
   while (running)
     {
       while (SDL_PollEvent (&event))
@@ -123,32 +143,55 @@ main (int argc, char *argv[])
 	      running = 0;
 	      break;
 	    case SDL_KEYDOWN:
-              /* TODO Should handle Command-Q, but only on the Mac... */
-	      switch (event.key.keysym.sym)
-		{
-		case SDLK_RETURN:
-		  if (f == steepest_neighbor)
-		    {
-		      f = gradient_magnitude;
-		    }
-		  else
-		    {
-		      f = steepest_neighbor;
-		    }
+	      /* TODO Should handle Command-Q, but only on the Mac... */
+	    case SDL_MOUSEBUTTONDOWN:
+	      column = event.button.x;
+	      SDL_FreeSurface (vis);
 
-		  SDL_FreeSurface (energy);
-		  energy = energize (image, f);
-		  break;
-		default:
-		  break;
-		}
+        float values[3];
+        float min;
+        int minpos;
+        for (int row = 0; row < image->h; ++row)
+          {
+            values[0] = values[1] = values[2] = 2.0f;
+            values[1] = array[row * image->w + column] = 1;
+            array[row * image->w + column] = 1;
+            if (column > 0)
+              {
+                values[0] = array[row * image->w + column - 1];
+              }
+            if (column < image->w - 1)
+              {
+                values[2] = array[row * image->w + column + 1];
+              }
+            min = values[1];
+            minpos = 1;
+            for (int i = 2; i >= 0; --i)
+              {
+                if (values[i] < min)
+                  {
+                    minpos = i;
+                    min = values[i];
+                  }
+              }
+             column += minpos - 1;
+          }
+
+	      vis =
+		energy_to_surface (array, image->flags, image->w, image->h,
+				   image->format->BitsPerPixel,
+				   image->format->Rmask, image->format->Gmask,
+				   image->format->Bmask,
+				   image->format->Amask);
+	      break;
+	    default:
 	      break;
 	    }
 	}
 
       SDL_FillRect (screen, NULL, black);
 
-      SDL_BlitSurface (energy, NULL, screen, NULL);
+      SDL_BlitSurface (vis, NULL, screen, NULL);
 
       SDL_Flip (screen);
     }

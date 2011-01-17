@@ -1,5 +1,6 @@
 seamless
-image.jpg
+*.jpg
+*.png
 *~
 *.swp
 *.o
