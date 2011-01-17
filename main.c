@@ -79,13 +79,9 @@ main (int argc, char *argv[])
       fprintf (stderr, "Could not initialize SDL: %s\n", SDL_GetError ());
       return (EXIT_FAILURE);
     }
-  char *title;
-  asprintf (&title, "seamless - %s", image_path);
+  char title[FILENAME_MAX];
+  sprintf (title, "seamless - %s", image_path);
   SDL_WM_SetCaption (title, title);
-  if (title)
-    {
-      free (title);
-    }
   if (IMG_Init (0))
     {
       fprintf (stderr, "Could not initialize SDL_image: %s\n",

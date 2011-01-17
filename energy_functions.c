@@ -7,8 +7,7 @@ float
 gradient_magnitude (Uint8 * image, int w, int h, int x, int y)
 {
   Uint8 *pixel;
-  Uint8 l1, l2;
-  float ddx, ddy;
+  float l1, l2, ddx, ddy;
   /* TODO Better handling of the borders... */
   /* d/dx */
   if (x == 0)
