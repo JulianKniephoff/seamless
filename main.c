@@ -63,12 +63,22 @@ energy_to_surface (float *array, Uint32 flags, int width,
 {
   Uint8 *result = malloc (sizeof (Uint8) * 3 * width * height), *pixel =
     result;
+  
+  float max = 0.0f;
+  for (int i = 0; i < width * height; ++i)
+    {
+      if (array[i] > max)
+        {
+          max = array[i];
+        }
+    }
+  float norm = 1.0f / max * 255;
 
   for (int i = 0; i < width * height; ++i)
     {
-      pixel[0] = array[i] * 255;
-      pixel[1] = array[i] * 255;
-      pixel[2] = array[i] * 255;
+      pixel[0] = array[i] * norm;
+      pixel[1] = array[i] * norm;
+      pixel[2] = array[i] * norm;
       pixel += 3;
     }
 
@@ -126,7 +136,7 @@ main (int argc, char *argv[])
   int running = 1;
   Uint32 black = SDL_MapRGB (screen->format, 0, 0, 0);
   SDL_Event event;
-  float *array = energize (image, steepest_neighbor);
+  float *array = energize (image, gradient_magnitude);
   SDL_Surface *vis =
     energy_to_surface (array, image->flags, image->w, image->h,
 		       image->format->BitsPerPixel, image->format->Rmask,

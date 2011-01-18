@@ -116,5 +116,5 @@ steepest_neighbor (Uint8 * image, int w, int h, int x, int y)
     }
 
   return max (max (max (max (max (max (max (l1, l2), l3), l4), l5), l6), l7),
-	      l8) / 256.0f;
+	      l8);
 }
