@@ -111,6 +111,30 @@ dynamic_program (float * array, int width, int height)
   return pred;
 }
 
+void
+color_seam (float *array, char *pred, int width, int height)
+{
+  float *pixel = array + (height - 1) * width;
+  float min = *pixel;
+  int min_x = 0;
+  for (int x = 0; x < width; ++x, ++pixel)
+    {
+      if (*pixel < min)
+        {
+          min_x = x;
+        }
+    }
+
+  pixel = array + (height - 1) * width + min_x;
+  pred += (height - 1) * width + min_x;
+  for (int y = 0; y < height; ++y)
+    {
+      *pixel = 1000.0f;
+      pixel += *pred - width;
+      pred += *pred - width;
+    }
+}
+
 SDL_Surface *
 energy_to_surface (float *array, Uint32 flags, int width,
 		   int height, int bitsPerPixel, Uint32 Rmask,
@@ -192,7 +216,8 @@ main (int argc, char *argv[])
   Uint32 black = SDL_MapRGB (screen->format, 0, 0, 0);
   SDL_Event event;
   float *array = energize (image, gradient_magnitude);
-  free (dynamic_program (array, image->w, image->h));
+  char *pred = dynamic_program (array, image->w, image->h);
+  color_seam (array, pred, image->w, image->h);
   SDL_Surface *vis =
     energy_to_surface (array, image->flags, image->w, image->h,
 		       image->format->BitsPerPixel, image->format->Rmask,
@@ -211,6 +236,7 @@ main (int argc, char *argv[])
               switch (event.key.keysym.sym)
                 {
                   case SDLK_q:
+                  case SDLK_ESCAPE:
                     running = 0;
                     break;
                   default:
