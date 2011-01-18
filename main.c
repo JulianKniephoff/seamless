@@ -142,8 +142,6 @@ main (int argc, char *argv[])
 	    case SDL_QUIT:
 	      running = 0;
 	      break;
-	    case SDL_KEYDOWN:
-	      /* TODO Should handle Command-Q, but only on the Mac... */
 	    case SDL_MOUSEBUTTONDOWN:
 	      column = event.button.x;
 	      SDL_FreeSurface (vis);
