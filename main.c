@@ -142,7 +142,6 @@ main (int argc, char *argv[])
 		       image->format->BitsPerPixel, image->format->Rmask,
 		       image->format->Gmask, image->format->Bmask,
 		       image->format->Amask);
-  int column = screen->h / 2;
   while (running)
     {
       while (SDL_PollEvent (&event))
@@ -152,49 +151,16 @@ main (int argc, char *argv[])
 	    case SDL_QUIT:
 	      running = 0;
 	      break;
-	    case SDL_MOUSEBUTTONDOWN:
-	      column = event.button.x;
-	      SDL_FreeSurface (vis);
-
-        float values[3];
-        float min;
-        int minpos;
-        for (int row = 0; row < image->h; ++row)
-          {
-            values[0] = values[1] = values[2] = 2.0f;
-            values[1] = array[row * image->w + column] = 1;
-            array[row * image->w + column] = 1;
-            if (column > 0)
-              {
-                values[0] = array[row * image->w + column - 1];
-              }
-            if (column < image->w - 1)
-              {
-                values[2] = array[row * image->w + column + 1];
-              }
-            min = values[1];
-            minpos = 1;
-            for (int i = 2; i >= 0; --i)
-              {
-                if (values[i] < min)
-                  {
-                    minpos = i;
-                    min = values[i];
-                  }
-              }
-             column += minpos - 1;
-          }
-
-	      vis =
-		energy_to_surface (array, image->flags, image->w, image->h,
-				   image->format->BitsPerPixel,
-				   image->format->Rmask, image->format->Gmask,
-				   image->format->Bmask,
-				   image->format->Amask);
-	      break;
-	    default:
-	      break;
-	    }
+            case SDL_KEYDOWN:
+              switch (event.key.keysym.sym)
+                {
+                  case SDLK_q:
+                    running = 0;
+                    break;
+                  default:
+                    break;
+                }
+            }
 	}
 
       SDL_FillRect (screen, NULL, black);
