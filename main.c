@@ -56,6 +56,61 @@ energize (SDL_Surface * image, energy_function f)
   return result;
 }
 
+/*
+ * TODO Think about the tradeoff between storing the predecessor index vs. horizontal offset:
+ * index makes "backtracking" faster...
+ */
+char *
+dynamic_program (float * array, int width, int height)
+{
+  char *pred = malloc (sizeof (char) * width * (height - 1));
+  float min;
+  char min_pos;
+  float *preds = array;
+  float *pixel = array + width;
+  char *pixel_pred = pred;
+  for (int y = 1; y < height; ++y)
+    {
+      for (int x = 0; x < width; ++x)
+        {
+          if (x > 0)
+            {
+              min = preds[-1];
+              min_pos = -1;
+            }
+          else
+            {
+              min = preds[0];
+              min_pos = 0;
+            }
+
+          if (preds[0] < min)
+            {
+              ++min_pos;
+              min = preds[0];
+            }
+
+          if (x < width - 1)
+            {
+              if (preds[1] < min)
+                {
+                  ++min_pos;
+                  min = preds[1];
+                }
+            }
+
+          *pixel_pred = min_pos;
+          ++pixel_pred;
+          *pixel += min;
+          ++pixel;
+
+          ++preds;
+        }
+    }
+
+  return pred;
+}
+
 SDL_Surface *
 energy_to_surface (float *array, Uint32 flags, int width,
 		   int height, int bitsPerPixel, Uint32 Rmask,
@@ -137,6 +192,7 @@ main (int argc, char *argv[])
   Uint32 black = SDL_MapRGB (screen->format, 0, 0, 0);
   SDL_Event event;
   float *array = energize (image, gradient_magnitude);
+  free (dynamic_program (array, image->w, image->h));
   SDL_Surface *vis =
     energy_to_surface (array, image->flags, image->w, image->h,
 		       image->format->BitsPerPixel, image->format->Rmask,
