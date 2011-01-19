@@ -1,4 +1,7 @@
+#include <assert.h>
+
 #include <stddef.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -111,28 +114,89 @@ dynamic_program (float * array, int width, int height)
   return pred;
 }
 
-void
-color_seam (float *array, char *pred, int width, int height)
+int
+min_pixel (float *array, int width, int height)
 {
+  int min_pos = 0;
   float *pixel = array + (height - 1) * width;
   float min = *pixel;
-  int min_x = 0;
   for (int x = 0; x < width; ++x, ++pixel)
     {
       if (*pixel < min)
         {
-          min_x = x;
+          min = *pixel;
+          min_pos = x;
         }
     }
+  return min_pos;
+}
 
-  pixel = array + (height - 1) * width + min_x;
-  pred += (height - 1) * width + min_x;
-  for (int y = 0; y < height; ++y)
+SDL_Surface *
+remove_seam (SDL_Surface * original, int column, char * preds)
+{
+  // fprintf (stderr, "column: %d\n", column);
+
+  SDL_Surface * result = SDL_CreateRGBSurface (original->flags, original->w - 1, original->h, original->format->BitsPerPixel,
+                                               original->format->Rmask, original->format->Gmask, original->format->Bmask,
+                                               original->format->Amask);
+  if (!result)
     {
-      *pixel = 1000.0f;
-      pixel += *pred - width;
-      pred += *pred - width;
+      return NULL;
     }
+
+  SDL_Rect source1, source2, dest2;
+  source1.x = 0;
+  source1.w = column;
+  source1.h = source2.h = 1;
+  source2.x = column + 1;
+  source2.w = original->w - column - 1;
+  char *pred = preds + (original->h - 2) * original->w + column;
+  memcpy (&dest2, &source2, sizeof (SDL_Rect));
+  dest2.x = source2.x - 1;
+  char prev_pred;
+  for (int y = original->h - 1; y >= 0; --y)
+    {
+      source1.h = source2.h = dest2.h = 1;
+      source1.y = source2.y = dest2.y = y;
+
+      // printf ("%d %d %d %d\n", source1.x, source1.y, source1.w, source1.h);
+      // printf ("%d %d %d %d\n", source2.x, source2.y, source2.w, source2.h);
+      // printf ("%d %d %d %d\n", dest2.x, dest2.y, dest2.w, dest2.h);
+      // printf ("%d\n", *pred);
+      // printf ("---\n");
+
+      // fprintf (stderr, "Source1: \n");
+      // fprintf (stderr, "x: %d y: %d w: %d h: %d\n", source1.x, source1.y, source1.w, source1.h);
+      SDL_BlitSurface (original, &source1, result, &source1);
+      //fprintf (stderr, "x: %d y: %d w: %d h: %d\n", source1.x, source1.y, source1.w, source1.h);
+      //fprintf (stderr, "Source2: \n");
+      //fprintf (stderr, "x: %d y: %d w: %d h: %d\n", source2.x, source2.y, source2.w, source2.h);
+      SDL_BlitSurface (original, &source2, result, &dest2);
+      //fprintf (stderr, "x: %d y: %d w: %d h: %d\n", source2.x, source2.y, source2.w, source2.h);
+
+      //fprintf (stderr, "source1.x: %d source1.w: %d source2.x: %d\n", source1.x, source1.w, source2.x);
+      //fprintf (stderr, "seam dist: %d y: %d pred: %d pred dist: %d\n", source1.x + source1.w - source2.x, y, prev_pred, (int) (pred - preds));
+      assert (source1.x + source1.w - source2.x == -1);
+      //fprintf (stderr, "size diff: %d\n", original->w - source1.w - source2.w);
+      assert (original->w - source1.w - source2.w == 1);
+      assert (pred >= preds || y == 0);
+
+      if (y != 0)
+        {
+          source1.w += *pred;
+          source2.x += *pred;
+          //fprintf (stderr, "w ist %d und wird verringert um %d\n", source2.w, *pred);
+          source2.w -= *pred;
+          dest2.w -= *pred;
+          dest2.x = source2.x - 1;
+          prev_pred = *pred;
+          pred += *pred - original->w;
+        }
+
+      //fprintf (stderr, "---\n");
+    }
+  
+  return result;
 }
 
 SDL_Surface *
@@ -212,17 +276,13 @@ main (int argc, char *argv[])
 
 
   /* Main loop */
-  int running = 1;
+  bool running = true;
   Uint32 black = SDL_MapRGB (screen->format, 0, 0, 0);
   SDL_Event event;
-  float *array = energize (image, gradient_magnitude);
-  char *pred = dynamic_program (array, image->w, image->h);
-  color_seam (array, pred, image->w, image->h);
-  SDL_Surface *vis =
-    energy_to_surface (array, image->flags, image->w, image->h,
-		       image->format->BitsPerPixel, image->format->Rmask,
-		       image->format->Gmask, image->format->Bmask,
-		       image->format->Amask);
+  float *array;
+  char *pred;
+  SDL_Surface *original;
+
   while (running)
     {
       while (SDL_PollEvent (&event))
@@ -230,7 +290,7 @@ main (int argc, char *argv[])
 	  switch (event.type)
 	    {
 	    case SDL_QUIT:
-	      running = 0;
+	      running = false;
 	      break;
             case SDL_KEYDOWN:
               switch (event.key.keysym.sym)
@@ -238,6 +298,21 @@ main (int argc, char *argv[])
                   case SDLK_q:
                   case SDLK_ESCAPE:
                     running = 0;
+                    break;
+                  case SDLK_RETURN:
+                    for (int i = 0; i < 50; ++i)
+                      {
+                        array = energize (image, steepest_neighbor);
+                        pred = dynamic_program (array, image->w, image->h);
+
+                        original = image;
+                        image = remove_seam (original,
+                          min_pixel (array, original->w, original->h), pred);
+
+                        SDL_FreeSurface (original);
+                        free (array);
+                        free (pred);
+                      }
                     break;
                   default:
                     break;
@@ -247,7 +322,7 @@ main (int argc, char *argv[])
 
       SDL_FillRect (screen, NULL, black);
 
-      SDL_BlitSurface (vis, NULL, screen, NULL);
+      SDL_BlitSurface (image, NULL, screen, NULL);
 
       SDL_Flip (screen);
     }

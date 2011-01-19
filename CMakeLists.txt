@@ -10,7 +10,8 @@ set (SOURCES
 )
 
 set_source_files_properties (main.c pixel_access.c array_image.c energy_functions.c
-  PROPERTIES COMPILE_FLAGS "-Wall -Werror -pedantic-errors -std=c99"
+  PROPERTIES COMPILE_FLAGS "-Wall -Wextra -pedantic-errors -std=c99 -O3"
+  #PROPERTIES COMPILE_FLAGS "-Wall -Werror -pedantic-errors -std=c99"
 )
 
 include (FindSDL)
