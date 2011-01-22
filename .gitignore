@@ -1,11 +1,3 @@
-*.log
-seamless
-*.jpg
-*.png
 *~
 *.swp
-*.o
-cmake_install.cmake
-CMakeFiles
-CMakeCache.txt
-Makefile
+build
