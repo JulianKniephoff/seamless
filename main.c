@@ -1,15 +1,14 @@
 #include <assert.h>
-
-#include <stddef.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <stdio.h>
-
 #include <SDL.h>
 #include <SDL_image.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "util.h"
 #include "array_image.h"
+#include "util.h"
 
 
 typedef float (*energy_function) (Uint8 * image, int width, int height, int x,
@@ -114,6 +113,105 @@ dynamic_program (float * array, int width, int height)
   return pred;
 }
 
+unsigned int *
+removal_indices (float *energy, int width, int height)
+{
+  unsigned int *result = malloc (sizeof (unsigned int) * width * height);
+  memset (result, -1, sizeof (unsigned int) * width * height);
+  int *pred = malloc (sizeof (int) * width * (height - 1));
+
+  float min;
+  int min_pos;
+  float *pixel = energy + width;
+  float *preds = energy;
+  int *pixel_preds = pred;
+  unsigned int *pred_indices = result;
+  unsigned int *pixel_indices = result + width;
+  int l = 0, m, r;
+  for (unsigned int k = 0; k < width; ++k)
+    {
+      pred_indices = result;
+      pixel_indices = result + width;
+      pixel = energy + width;
+      preds = energy;
+      pixel_preds = pred;
+
+      for (int y = 1; y < height; ++y)
+        {
+          m = 0;
+          while (*(pred_indices++) < k)
+            {
+              ++preds;
+              ++m;
+            }
+          while (*(pixel_indices++) < k)
+            {
+              ++pixel;
+              ++pixel_preds;
+              --m;
+            }
+
+          for (int x = 0; x < width - k; ++x)
+            {
+              if (x > 0)
+                {
+                  min = preds[l];
+                  min_pos = l;
+                }
+              else
+                {
+                  min = *preds;
+                  min_pos = m;
+                }
+              if (*preds < min)
+                {
+                  min = *preds;
+                  min_pos = m;
+                }
+              r = m;
+              if (x < width - k - 1)
+                {
+                  do
+                    {
+                      ++preds;
+                      ++r;
+                    } while (*(++pred_indices) < k);
+                  if (*preds < min)
+                    {
+                      min = *preds;
+                      min_pos = r;
+                    }
+                }
+              
+              fprintf (stderr, "%d %d %d\n", l, m, r);
+
+              *pixel += min;
+              *pixel_preds = min_pos;
+
+              l = m;
+              m = r;
+              do
+                {
+                  ++pixel;
+                  ++pixel_preds;
+                  --l;
+                  --m;
+                } while (*(++pixel_indices) < k);
+            }
+          fprintf (stderr, "---\n");
+        }
+
+      // pixel = energy + 
+      // min = 
+      // for (int x = 0; x < width; ++x)
+      //   {}
+    }
+
+  free (pred);
+
+  return result;
+}
+
 int
 min_pixel (float *array, int width, int height)
 {
@@ -134,8 +232,6 @@ min_pixel (float *array, int width, int height)
 SDL_Surface *
 remove_seam (SDL_Surface * original, int column, char * preds)
 {
-  // fprintf (stderr, "column: %d\n", column);
-
   SDL_Surface * result = SDL_CreateRGBSurface (original->flags, original->w - 1, original->h, original->format->BitsPerPixel,
                                                original->format->Rmask, original->format->Gmask, original->format->Bmask,
                                                original->format->Amask);
@@ -159,41 +255,19 @@ remove_seam (SDL_Surface * original, int column, char * preds)
       source1.h = source2.h = dest2.h = 1;
       source1.y = source2.y = dest2.y = y;
 
-      // printf ("%d %d %d %d\n", source1.x, source1.y, source1.w, source1.h);
-      // printf ("%d %d %d %d\n", source2.x, source2.y, source2.w, source2.h);
-      // printf ("%d %d %d %d\n", dest2.x, dest2.y, dest2.w, dest2.h);
-      // printf ("%d\n", *pred);
-      // printf ("---\n");
-
-      // fprintf (stderr, "Source1: \n");
-      // fprintf (stderr, "x: %d y: %d w: %d h: %d\n", source1.x, source1.y, source1.w, source1.h);
       SDL_BlitSurface (original, &source1, result, &source1);
-      //fprintf (stderr, "x: %d y: %d w: %d h: %d\n", source1.x, source1.y, source1.w, source1.h);
-      //fprintf (stderr, "Source2: \n");
-      //fprintf (stderr, "x: %d y: %d w: %d h: %d\n", source2.x, source2.y, source2.w, source2.h);
       SDL_BlitSurface (original, &source2, result, &dest2);
-      //fprintf (stderr, "x: %d y: %d w: %d h: %d\n", source2.x, source2.y, source2.w, source2.h);
-
-      //fprintf (stderr, "source1.x: %d source1.w: %d source2.x: %d\n", source1.x, source1.w, source2.x);
-      //fprintf (stderr, "seam dist: %d y: %d pred: %d pred dist: %d\n", source1.x + source1.w - source2.x, y, prev_pred, (int) (pred - preds));
-      assert (source1.x + source1.w - source2.x == -1);
-      //fprintf (stderr, "size diff: %d\n", original->w - source1.w - source2.w);
-      assert (original->w - source1.w - source2.w == 1);
-      assert (pred >= preds || y == 0);
 
       if (y != 0)
         {
           source1.w += *pred;
           source2.x += *pred;
-          //fprintf (stderr, "w ist %d und wird verringert um %d\n", source2.w, *pred);
           source2.w -= *pred;
           dest2.w -= *pred;
           dest2.x = source2.x - 1;
           prev_pred = *pred;
           pred += *pred - original->w;
         }
-
-      //fprintf (stderr, "---\n");
     }
   
   return result;
@@ -300,10 +374,11 @@ main (int argc, char *argv[])
                     running = 0;
                     break;
                   case SDLK_RETURN:
-                    for (int i = 0; i < 50; ++i)
+                    for (int i = 0; i < 1; ++i)
                       {
                         array = energize (image, steepest_neighbor);
                         pred = dynamic_program (array, image->w, image->h);
+                        free (removal_indices (array, image->w, image->h));
 
                         original = image;
                         image = remove_seam (original,
